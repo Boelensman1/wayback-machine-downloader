@@ -321,6 +321,12 @@ class WaybackMachineDownloader
 
     puts " found #{snapshot_list_to_consider.length} snapshots."
 
+    # Filter to one snapshot per calendar month
+    filtered_snapshots = filter_to_monthly_snapshots(snapshot_list_to_consider.to_a)
+    snapshot_list_to_consider = Concurrent::Array.new(filtered_snapshots)
+    
+    puts " filtered to #{snapshot_list_to_consider.length} snapshots (1 per month)."
+
     # Save the fetched list to the cache file
     begin
       FileUtils.mkdir_p(File.dirname(cdx_path))
@@ -748,6 +754,34 @@ class WaybackMachineDownloader
         file_remote_info[1]
       end
     end
+  end
+
+  def filter_to_monthly_snapshots(snapshots)
+    # Group snapshots by URL and then by year-month
+    url_groups = {}
+    
+    snapshots.each do |timestamp, url|
+      next unless timestamp && url
+      
+      # Parse timestamp (format: YYYYMMDDHHMMSS)
+      year_month = timestamp.to_s[0..5] # YYYYMM
+      
+      url_groups[url] ||= {}
+      url_groups[url][year_month] ||= []
+      url_groups[url][year_month] << [timestamp, url]
+    end
+    
+    # Select one snapshot per month for each URL (prefer the earliest in each month)
+    filtered = []
+    url_groups.each do |url, months|
+      months.each do |year_month, snapshots_in_month|
+        # Sort by timestamp and take the first (earliest) one
+        earliest = snapshots_in_month.min_by { |ts, _| ts.to_s }
+        filtered << earliest if earliest
+      end
+    end
+    
+    filtered
   end
 
   private
