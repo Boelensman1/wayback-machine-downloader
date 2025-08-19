@@ -757,8 +757,8 @@ class WaybackMachineDownloader
   end
 
   def filter_to_monthly_snapshots(snapshots)
-    # Group snapshots by year-month only (not by URL)
-    month_groups = {}
+    # Group snapshots by both year-month AND URL to preserve variants
+    month_url_groups = {}
     
     snapshots.each do |timestamp, url|
       next unless timestamp && url
@@ -766,15 +766,18 @@ class WaybackMachineDownloader
       # Parse timestamp (format: YYYYMMDDHHMMSS)
       year_month = timestamp.to_s[0..5] # YYYYMM
       
-      month_groups[year_month] ||= []
-      month_groups[year_month] << [timestamp, url]
+      # Create composite key: year_month + URL
+      key = "#{year_month}||#{url}"
+      
+      month_url_groups[key] ||= []
+      month_url_groups[key] << [timestamp, url]
     end
     
-    # Select one snapshot per month (prefer the earliest in each month)
+    # Select one snapshot per month per URL (prefer the earliest in each group)
     filtered = []
-    month_groups.each do |year_month, snapshots_in_month|
+    month_url_groups.each do |key, snapshots_in_group|
       # Sort by timestamp and take the first (earliest) one
-      earliest = snapshots_in_month.min_by { |ts, _| ts.to_s }
+      earliest = snapshots_in_group.min_by { |ts, _| ts.to_s }
       filtered << earliest if earliest
     end
     
