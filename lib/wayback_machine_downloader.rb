@@ -766,13 +766,8 @@ class WaybackMachineDownloader
       # Parse timestamp (format: YYYYMMDDHHMMSS)
       year_month = timestamp.to_s[0..5] # YYYYMM
       
-      # Normalize URL: remove auth info, protocol, www, port, convert to lowercase
-      normalized_url = url.gsub(/^https?:\/\/[^@]*@/i, '')  # remove auth
-                          .gsub(/^https?:\/\//i, '')        # remove protocol
-                          .gsub(/^www\./i, '')              # remove www
-                          .gsub(/:80(\/|$)/, '\1')          # remove :80 port
-                          .gsub(/:443(\/|$)/, '\1')         # remove :443 port
-                          .downcase
+      # Normalize URL: remove auth info, convert to lowercase
+      normalized_url = url.gsub(/^https?:\/\/[^@]*@/i, '').gsub(/^https?:\/\//i, '').downcase
       
       # Create composite key: year_month + normalized_url
       key = "#{year_month}||#{normalized_url}"
