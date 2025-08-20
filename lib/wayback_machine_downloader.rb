@@ -757,8 +757,8 @@ class WaybackMachineDownloader
   end
 
   def filter_to_monthly_snapshots(snapshots)
-    # Group snapshots by year-month and normalized URL
-    month_groups = {}
+    # Group snapshots by both year-month AND URL to preserve variants
+    month_url_groups = {}
     
     snapshots.each do |timestamp, url|
       next unless timestamp && url
@@ -766,33 +766,19 @@ class WaybackMachineDownloader
       # Parse timestamp (format: YYYYMMDDHHMMSS)
       year_month = timestamp.to_s[0..5] # YYYYMM
       
-      # Normalize URL: remove auth info, convert to lowercase
-      normalized_url = url.gsub(/^https?:\/\/[^@]*@/i, '').gsub(/^https?:\/\//i, '').downcase
+      # Create composite key: year_month + URL
+      key = "#{year_month}||#{url}"
       
-      # Create composite key: year_month + normalized_url
-      key = "#{year_month}||#{normalized_url}"
-      
-      month_groups[key] ||= []
-      month_groups[key] << [timestamp, url]
+      month_url_groups[key] ||= []
+      month_url_groups[key] << [timestamp, url]
     end
     
-    # For each month+normalized_url group, select best variant
+    # Select one snapshot per month per URL (prefer the earliest in each group)
     filtered = []
-    month_groups.each do |key, snapshots_in_group|
-      # Group by protocol within this month
-      protocol_groups = snapshots_in_group.group_by { |ts, url| url.match(/^https?/i)&.to_s&.downcase || 'unknown' }
-      
-      # Prefer HTTPS over HTTP, only keep one per month per normalized URL
-      if protocol_groups['https']
-        earliest = protocol_groups['https'].min_by { |ts, _| ts.to_s }
-        filtered << earliest if earliest
-      elsif protocol_groups['http']
-        earliest = protocol_groups['http'].min_by { |ts, _| ts.to_s }
-        filtered << earliest if earliest
-      elsif protocol_groups['unknown']
-        earliest = protocol_groups['unknown'].min_by { |ts, _| ts.to_s }
-        filtered << earliest if earliest
-      end
+    month_url_groups.each do |key, snapshots_in_group|
+      # Sort by timestamp and take the first (earliest) one
+      earliest = snapshots_in_group.min_by { |ts, _| ts.to_s }
+      filtered << earliest if earliest
     end
     
     filtered
