@@ -51,7 +51,7 @@ while IFS= read -r url; do
     echo "[$CURRENT/$TOTAL_URLS] Processing: $url"
     
     # Run wayback_machine_downloader with specified options
-    ruby "$DOWNLOADER" "$url" -e -s -f 20180525000000
+    ruby "$DOWNLOADER" "$url" -e -s -f 20180525000000 --keep
     
     EXIT_CODE=$?
     if [ $EXIT_CODE -eq 0 ]; then
